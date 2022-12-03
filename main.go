@@ -51,11 +51,11 @@ var (
 	// rxUUID      = bluetooth.CharacteristicUUIDUARTRX
 	// txUUID      = bluetooth.CharacteristicUUIDUARTTX
 	serviceUUID, _ = bluetooth.ParseUUID("d6cb1959-8010-43bd-8ef7-48dbd249b984")
-	rxUUID, _      = bluetooth.ParseUUID("493ebfb0-b690-4ae8-a77a-329619c6f613")
+	rxUUID, _      = bluetooth.ParseUUID("493ebfb0-b690-4ae8-a77a-329619c6f614")
 	txUUID, _      = bluetooth.ParseUUID("2d75504c-b822-44b3-bb81-65d7b6cbdae2")
 	ipUUID, _      = bluetooth.ParseUUID("2d75504c-b822-44b3-bb81-65d7b6cbdae1")
 	readUUID, _    = bluetooth.ParseUUID("2d75504c-b822-44b3-bb81-65d7b6cbdae3")
-	settingUUID, _ = bluetooth.ParseUUID("2d75504c-b822-44b3-bb81-65d7b6cbdae4")
+	settingUUID, _ = bluetooth.ParseUUID("493ebfb0-b690-4ae8-a77a-329619c6f613")
 )
 
 var localAPIHost = "http://127.0.0.1:3002/"
@@ -95,10 +95,16 @@ func main() {
 			},
 			{
 				Handle: &settingChar,
-				UUID:   rxUUID,
+				UUID:   settingUUID,
 				Flags:  bluetooth.CharacteristicWritePermission | bluetooth.CharacteristicWriteWithoutResponsePermission,
 				WriteEvent: func(client bluetooth.Connection, offset int, value []byte) {
-					txChar.Write(value)
+					log.Println(value)
+					log.Println("write setting to ble")
+					setupNewWifi(value)
+					ipaddresses, _ := getLocalIPAddresses()
+					ipString, _ := json.Marshal(ipaddresses)
+					log.Println(ipString)
+					ipChar.Write(ipString)
 				},
 			},
 			{
@@ -205,10 +211,11 @@ func getBleServiceName() (string, error) {
 	return bleName.Ble, nil
 }
 
-func setupNewWifi(wifiConfig WIFIConfig) (bool, error) {
-	postData, _ := json.Marshal(wifiConfig)
+func setupNewWifi(wifiConfig []byte) (bool, error) {
+	// postData, _ := json.Marshal(wifiConfig)
+	log.Println("api to setup wifi")
 
-	request, _ := http.NewRequest("POST", setupNewWifiURL, bytes.NewBuffer(postData))
+	request, _ := http.NewRequest("POST", setupNewWifiURL, bytes.NewBuffer(wifiConfig))
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 
 	client := &http.Client{}
@@ -219,6 +226,8 @@ func setupNewWifi(wifiConfig WIFIConfig) (bool, error) {
 		return false, err
 	}
 	defer res.Body.Close()
+	log.Println("=====res body======")
+	log.Println(res.Body)
 	rbody, _ := ioutil.ReadAll(res.Body)
 	wifiSettingStatus := WifiSettingStatus{}
 	err = json.Unmarshal(rbody, &wifiSettingStatus)
