@@ -47,14 +47,11 @@ type WifiSettingStatus struct {
 }
 
 var (
-	// serviceUUID = bluetooth.ServiceUUIDNordicUART
-	// rxUUID      = bluetooth.CharacteristicUUIDUARTRX
-	// txUUID      = bluetooth.CharacteristicUUIDUARTTX
 	serviceUUID, _ = bluetooth.ParseUUID("d6cb1959-8010-43bd-8ef7-48dbd249b984")
-	rxUUID, _      = bluetooth.ParseUUID("493ebfb0-b690-4ae8-a77a-329619c6f614")
-	txUUID, _      = bluetooth.ParseUUID("2d75504c-b822-44b3-bb81-65d7b6cbdae2")
+	refreshUUID, _ = bluetooth.ParseUUID("493ebfb0-b690-4ae8-a77a-329619c6f614")
+	statusUUID, _  = bluetooth.ParseUUID("2d75504c-b822-44b3-bb81-65d7b6cbdae2")
 	ipUUID, _      = bluetooth.ParseUUID("2d75504c-b822-44b3-bb81-65d7b6cbdae1")
-	readUUID, _    = bluetooth.ParseUUID("2d75504c-b822-44b3-bb81-65d7b6cbdae3")
+	// readUUID, _    = bluetooth.ParseUUID("2d75504c-b822-44b3-bb81-65d7b6cbdae3")
 	settingUUID, _ = bluetooth.ParseUUID("493ebfb0-b690-4ae8-a77a-329619c6f613")
 )
 
@@ -77,8 +74,8 @@ func main() {
 	}))
 	must("start adv", adv.Start())
 
-	var rxChar bluetooth.Characteristic
-	var txChar bluetooth.Characteristic
+	var refreshChar bluetooth.Characteristic
+	var statusChar bluetooth.Characteristic
 	var ipChar bluetooth.Characteristic
 	var readChar bluetooth.Characteristic
 	var settingChar bluetooth.Characteristic
@@ -86,11 +83,13 @@ func main() {
 		UUID: serviceUUID,
 		Characteristics: []bluetooth.CharacteristicConfig{
 			{
-				Handle: &rxChar,
-				UUID:   rxUUID,
+				Handle: &refreshChar,
+				UUID:   refreshUUID,
 				Flags:  bluetooth.CharacteristicWritePermission | bluetooth.CharacteristicWriteWithoutResponsePermission,
 				WriteEvent: func(client bluetooth.Connection, offset int, value []byte) {
-					txChar.Write(value)
+					//todo: get network status
+					//todo: get ip addresses
+
 				},
 			},
 			{
@@ -107,22 +106,22 @@ func main() {
 					ipChar.Write(ipString)
 				},
 			},
-			{
-				Handle: &readChar,
-				UUID:   readUUID,
-				Flags:  bluetooth.CharacteristicWritePermission | bluetooth.CharacteristicWriteWithoutResponsePermission,
-				WriteEvent: func(client bluetooth.Connection, offset int, value []byte) {
-					// txChar.Write(value)
+			// {
+			// 	Handle: &readChar,
+			// 	UUID:   readUUID,
+			// 	Flags:  bluetooth.CharacteristicWritePermission | bluetooth.CharacteristicWriteWithoutResponsePermission,
+			// 	WriteEvent: func(client bluetooth.Connection, offset int, value []byte) {
+			// 		// txChar.Write(value)
 
-					ipaddresses, _ := getLocalIPAddresses()
-					ipString, _ := json.Marshal(ipaddresses)
-					log.Println(ipString)
-					ipChar.Write(ipString)
-				},
-			},
+			// 		ipaddresses, _ := getLocalIPAddresses()
+			// 		ipString, _ := json.Marshal(ipaddresses)
+			// 		log.Println(ipString)
+			// 		ipChar.Write(ipString)
+			// 	},
+			// },
 			{
-				Handle: &txChar,
-				UUID:   txUUID,
+				Handle: &statusChar,
+				UUID:   statusUUID,
 				Flags:  bluetooth.CharacteristicNotifyPermission | bluetooth.CharacteristicReadPermission,
 			},
 			{
