@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -48,8 +49,8 @@ type WifiSettingStatus struct {
 
 var (
 	serviceUUID, _ = bluetooth.ParseUUID("d6cb1959-8010-43bd-8ef7-48dbd249b984")
-	refreshUUID, _ = bluetooth.ParseUUID("493ebfb0-b690-4ae8-a77a-329619c6f614")
-	statusUUID, _  = bluetooth.ParseUUID("2d75504c-b822-44b3-bb81-65d7b6cbdae2")
+	refreshUUID, _ = bluetooth.ParseUUID("c537baa5-6201-4275-ab14-da353bde3dc3")
+	statusUUID, _  = bluetooth.ParseUUID("f9e9e098-77d4-4db3-a08f-8321c493431b")
 	ipUUID, _      = bluetooth.ParseUUID("2d75504c-b822-44b3-bb81-65d7b6cbdae1")
 	// readUUID, _    = bluetooth.ParseUUID("2d75504c-b822-44b3-bb81-65d7b6cbdae3")
 	settingUUID, _ = bluetooth.ParseUUID("493ebfb0-b690-4ae8-a77a-329619c6f613")
@@ -64,12 +65,18 @@ var getBleServiceNameURL = localAPIHost + "getBleServiceName"
 var setupNewWifiURL = localAPIHost + "setupNewWifi"
 
 func main() {
+	bleName, err := getBleServiceName()
+	if err != nil {
+		bleName = "kimacloud-" + makeid(6)
+	}
+
 	println("starting")
+
 	adapter := bluetooth.DefaultAdapter
 	must("enable BLE stack", adapter.Enable())
 	adv := adapter.DefaultAdvertisement()
 	must("config adv", adv.Configure(bluetooth.AdvertisementOptions{
-		LocalName:    "kimacloud-x11", // Nordic UART Service
+		LocalName:    bleName, // kimacloud sevice
 		ServiceUUIDs: []bluetooth.UUID{serviceUUID},
 	}))
 	must("start adv", adv.Start())
@@ -77,7 +84,7 @@ func main() {
 	var refreshChar bluetooth.Characteristic
 	var statusChar bluetooth.Characteristic
 	var ipChar bluetooth.Characteristic
-	var readChar bluetooth.Characteristic
+	// var readChar bluetooth.Characteristic
 	var settingChar bluetooth.Characteristic
 	must("add service", adapter.AddService(&bluetooth.Service{
 		UUID: serviceUUID,
@@ -89,6 +96,17 @@ func main() {
 				WriteEvent: func(client bluetooth.Connection, offset int, value []byte) {
 					//todo: get network status
 					//todo: get ip addresses
+
+					ipaddresses, _ := getLocalIPAddresses()
+					ipString, _ := json.Marshal(ipaddresses)
+					ipChar.Write(ipString)
+
+					netState, _ := internetHealthyCheck()
+					if netState {
+						statusChar.Write([]byte("online"))
+					} else {
+						statusChar.Write([]byte("offline"))
+					}
 
 				},
 			},
@@ -103,7 +121,13 @@ func main() {
 					ipaddresses, _ := getLocalIPAddresses()
 					ipString, _ := json.Marshal(ipaddresses)
 					log.Println(ipString)
-					ipChar.Write(ipString)
+					netState, _ := internetHealthyCheck()
+					if netState {
+						statusChar.Write([]byte("online"))
+					} else {
+						statusChar.Write([]byte("offline"))
+					}
+
 				},
 			},
 			// {
@@ -149,6 +173,17 @@ func must(action string, err error) {
 	if err != nil {
 		panic("failed to " + action + ": " + err.Error())
 	}
+}
+
+func makeid(length int) string {
+	result := ""
+	characters := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	charactersLength := len(characters)
+	for i := 0; i < length; i++ {
+		//   result += characters.charAt(Math.floor(Math.random() * charactersLength));
+		result += string(characters[rand.Intn(charactersLength)])
+	}
+	return result
 }
 
 func getLocalIPAddresses() (DeviceIPAddress, error) {
