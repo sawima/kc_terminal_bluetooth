@@ -156,7 +156,7 @@ func main() {
 	address, _ := adapter.Address()
 	for {
 		println("Kimacloud Bluetooth Service /", address.MAC.String())
-		time.Sleep(500 * time.Microsecond)
+		time.Sleep(1 * time.Second)
 	}
 }
 
