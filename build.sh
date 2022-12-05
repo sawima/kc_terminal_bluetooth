@@ -1,3 +1,3 @@
 #!/bin/sh
 
-GOOS=linux GOARCH=arm64 go build -o bin/kimax26
+GOOS=linux GOARCH=arm64 go build -o bin/kimable

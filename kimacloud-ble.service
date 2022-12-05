@@ -1,0 +1,14 @@
+[Unit]
+Description=Kimacloud Ble Service
+Documentation=https://kimacloud.com/
+After=pm2-root.service
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+ExecStart=/home/player/kimable
+WorkingDirectory=/home/player
+User=root
+Restart=always
+RestartSec=5
