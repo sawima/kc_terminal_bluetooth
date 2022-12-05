@@ -1,0 +1,11 @@
+#! /bin/bash
+
+echo "try to reset terminal form shell"
+
+cd /application/signage-device-application
+
+git fetch --all --tags
+
+git checkout v2.0.0
+
+reboot
