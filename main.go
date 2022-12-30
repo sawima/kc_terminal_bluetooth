@@ -7,8 +7,6 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-	"os/exec"
-	"time"
 
 	"tinygo.org/x/bluetooth"
 )
@@ -63,6 +61,8 @@ var internetHealthyCheckURL = localAPIHost + "internetHealthyCheck"
 var ideviceIsInitializedURL = localAPIHost + "deviceIsInitialized"
 var getBleServiceNameURL = localAPIHost + "getBleServiceName"
 var setupNewWifiURL = localAPIHost + "setupNewWifi"
+var factoryResetURL = localAPIHost + "factoryResetForBle"
+
 var deviceBleFile = "/application/signage-device-application/db/device.txt"
 
 func main() {
@@ -145,7 +145,7 @@ func main() {
 				Flags:  bluetooth.CharacteristicWritePermission | bluetooth.CharacteristicWriteWithoutResponsePermission,
 				WriteEvent: func(client bluetooth.Connection, offset int, value []byte) {
 					log.Println("reset terminal")
-					resetTerminal()
+					resetTerminal(value)
 				},
 			},
 			{
@@ -164,12 +164,12 @@ func main() {
 	println("advertising...")
 	ipaddresses, _ := getLocalIPAddresses()
 	ipString, _ := json.Marshal(ipaddresses)
-	// log.Println(ipString)
+	log.Println(ipString)
 	ipChar.Write(ipString)
-	address, _ := adapter.Address()
+	// address, _ := adapter.Address()
 	for {
 		// println("Kimacloud Bluetooth Service /", address.MAC.String())
-		time.Sleep(3 * time.Second)
+		// time.Sleep(3 * time.Second)
 	}
 }
 
@@ -272,13 +272,26 @@ func setupNewWifi(wifiConfig []byte) (bool, error) {
 	return wifiSettingStatus.Success, nil
 }
 
-func resetTerminal() (bool, error) {
-	// startCMD, _ := exec.Command("echo", "start work on ").Output()
-	// log.Println(string(startCMD))
-	resetCMD := exec.Command("/home/player/resetTerminal")
-	var out bytes.Buffer
-	resetCMD.Stdout = &out
-	resetCMD.Run()
-	log.Println(out.String())
+func resetTerminal(resetVersion []byte) (bool, error) {
+	// // startCMD, _ := exec.Command("echo", "start work on ").Output()
+	// // log.Println(string(startCMD))
+	// resetCMD := exec.Command("/home/player/resetTerminal")
+	// var out bytes.Buffer
+	// resetCMD.Stdout = &out
+	// resetCMD.Run()
+	// log.Println(out.String())
+
+	//todo: factoryResetURL
+	request, _ := http.NewRequest("POST", factoryResetURL, bytes.NewBuffer(resetVersion))
+	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
+
+	client := &http.Client{}
+	res, err := client.Do(request)
+
+	if err != nil {
+		log.Println(err)
+		return false, err
+	}
+	defer res.Body.Close()
 	return true, nil
 }
