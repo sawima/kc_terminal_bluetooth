@@ -63,14 +63,27 @@ var internetHealthyCheckURL = localAPIHost + "internetHealthyCheck"
 var ideviceIsInitializedURL = localAPIHost + "deviceIsInitialized"
 var getBleServiceNameURL = localAPIHost + "getBleServiceName"
 var setupNewWifiURL = localAPIHost + "setupNewWifi"
+var deviceBleFile = "/application/signage-device-application/db/device.txt"
 
 func main() {
-	bleName, err := getBleServiceName()
+	// bleName, err := getBleServiceName()
+	// if err != nil {
+	// 	bleName = "kimacloud-" + makeid(6)
+	// }
+	// if bleName == "" {
+	// 	bleName = "kimacloud-" + makeid(6)
+	// }
+	// read ble file from nodejs env
+	// log.Println("read bleName from txt file ")
+	file, err := ioutil.ReadFile(deviceBleFile)
 	if err != nil {
-		bleName = "kimacloud-" + makeid(6)
+		log.Println(err)
 	}
+	bleName := string(file)
 
-	println("starting")
+	// print(bleName)
+
+	// println("starting")
 
 	adapter := bluetooth.DefaultAdapter
 	must("enable BLE stack", adapter.Enable())
@@ -151,12 +164,12 @@ func main() {
 	println("advertising...")
 	ipaddresses, _ := getLocalIPAddresses()
 	ipString, _ := json.Marshal(ipaddresses)
-	log.Println(ipString)
+	// log.Println(ipString)
 	ipChar.Write(ipString)
 	address, _ := adapter.Address()
 	for {
-		println("Kimacloud Bluetooth Service /", address.MAC.String())
-		time.Sleep(1 * time.Second)
+		// println("Kimacloud Bluetooth Service /", address.MAC.String())
+		time.Sleep(3 * time.Second)
 	}
 }
 
