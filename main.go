@@ -7,6 +7,9 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
+	"os/signal"
+	"time"
 
 	"tinygo.org/x/bluetooth"
 )
@@ -166,11 +169,18 @@ func main() {
 	ipString, _ := json.Marshal(ipaddresses)
 	log.Println(ipString)
 	ipChar.Write(ipString)
-	// address, _ := adapter.Address()
-	for {
-		// println("Kimacloud Bluetooth Service /", address.MAC.String())
-		// time.Sleep(3 * time.Second)
-	}
+	address, _ := adapter.Address()
+	// for {
+	// 	println("Kimacloud Bluetooth Service /", address.MAC.String())
+	// 	time.Sleep(1 * time.Second)
+	// }
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		println("Kimacloud Bluetooth Service /", address.MAC.String())
+		time.Sleep(1 * time.Second)
+	}()
+	<-c
 }
 
 func must(action string, err error) {
