@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
@@ -39,11 +38,6 @@ type NetworkStatus struct {
 	Message string `json:"message"`
 }
 
-//BleName get ble name from api
-type BleName struct {
-	Ble string `json:"ble"`
-}
-
 //WifiSettingStatus is the network health staus
 type WifiSettingStatus struct {
 	Success bool `json:"success"`
@@ -61,33 +55,17 @@ var (
 var localAPIHost = "http://127.0.0.1:3002/"
 var getLocalIPAddressURL = localAPIHost + "getLocalIPAddress"
 var internetHealthyCheckURL = localAPIHost + "internetHealthyCheck"
-var ideviceIsInitializedURL = localAPIHost + "deviceIsInitialized"
-var getBleServiceNameURL = localAPIHost + "getBleServiceName"
 var setupNewWifiURL = localAPIHost + "setupNewWifi"
 var factoryResetURL = localAPIHost + "factoryResetForBle"
 
 var deviceBleFile = "/application/signage-device-application/db/device.txt"
 
 func main() {
-	// bleName, err := getBleServiceName()
-	// if err != nil {
-	// 	bleName = "kimacloud-" + makeid(6)
-	// }
-	// if bleName == "" {
-	// 	bleName = "kimacloud-" + makeid(6)
-	// }
-	// read ble file from nodejs env
-	// log.Println("read bleName from txt file ")
 	file, err := ioutil.ReadFile(deviceBleFile)
 	if err != nil {
 		log.Println(err)
 	}
 	bleName := string(file)
-
-	// print(bleName)
-
-	// println("starting")
-
 	adapter := bluetooth.DefaultAdapter
 	must("enable BLE stack", adapter.Enable())
 	adv := adapter.DefaultAdvertisement()
@@ -96,7 +74,6 @@ func main() {
 		ServiceUUIDs: []bluetooth.UUID{serviceUUID},
 	}))
 	must("start adv", adv.Start())
-
 	var refreshChar bluetooth.Characteristic
 	var statusChar bluetooth.Characteristic
 	var ipChar bluetooth.Characteristic
@@ -110,8 +87,6 @@ func main() {
 				UUID:   refreshUUID,
 				Flags:  bluetooth.CharacteristicWritePermission | bluetooth.CharacteristicWriteWithoutResponsePermission,
 				WriteEvent: func(client bluetooth.Connection, offset int, value []byte) {
-					//todo: get network status
-					//todo: get ip addresses
 					ipaddresses, _ := getLocalIPAddresses()
 					ipString, _ := json.Marshal(ipaddresses)
 					ipChar.Write(ipString)
@@ -163,17 +138,13 @@ func main() {
 			},
 		},
 	}))
-
 	println("advertising...")
 	ipaddresses, _ := getLocalIPAddresses()
 	ipString, _ := json.Marshal(ipaddresses)
 	log.Println(ipString)
 	ipChar.Write(ipString)
 	address, _ := adapter.Address()
-	// for {
-	// 	println("Kimacloud Bluetooth Service /", address.MAC.String())
-	// 	time.Sleep(1 * time.Second)
-	// }
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
@@ -189,19 +160,7 @@ func must(action string, err error) {
 	}
 }
 
-func makeid(length int) string {
-	result := ""
-	characters := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-	charactersLength := len(characters)
-	for i := 0; i < length; i++ {
-		//   result += characters.charAt(Math.floor(Math.random() * charactersLength));
-		result += string(characters[rand.Intn(charactersLength)])
-	}
-	return result
-}
-
 func getLocalIPAddresses() (DeviceIPAddress, error) {
-	log.Println("api to fetch the ip address")
 	res, err := http.Get(getLocalIPAddressURL)
 	if err != nil {
 		log.Println(err)
@@ -217,7 +176,6 @@ func getLocalIPAddresses() (DeviceIPAddress, error) {
 		log.Println(err)
 		return DeviceIPAddress{}, err
 	}
-	log.Println(ipaddresses)
 	return ipaddresses, nil
 }
 
@@ -235,26 +193,7 @@ func internetHealthyCheck() (bool, error) {
 		log.Println(err)
 		return false, err
 	}
-	log.Println(networkStatus)
 	return networkStatus.Success, nil
-}
-
-func getBleServiceName() (string, error) {
-	res, err := http.Get(getBleServiceNameURL)
-	if err != nil {
-		log.Println(err)
-		return "", err
-	}
-	defer res.Body.Close()
-	rbody, _ := ioutil.ReadAll(res.Body)
-	bleName := BleName{}
-	err = json.Unmarshal(rbody, &bleName)
-	if err != nil {
-		log.Println(err)
-		return "", err
-	}
-	log.Println(bleName)
-	return bleName.Ble, nil
 }
 
 func setupNewWifi(wifiConfig []byte) (bool, error) {
@@ -269,8 +208,6 @@ func setupNewWifi(wifiConfig []byte) (bool, error) {
 		return false, err
 	}
 	defer res.Body.Close()
-	log.Println("=====res body======")
-	log.Println(res.Body)
 	rbody, _ := ioutil.ReadAll(res.Body)
 	wifiSettingStatus := WifiSettingStatus{}
 	err = json.Unmarshal(rbody, &wifiSettingStatus)
@@ -283,15 +220,6 @@ func setupNewWifi(wifiConfig []byte) (bool, error) {
 }
 
 func resetTerminal(resetVersion []byte) (bool, error) {
-	// // startCMD, _ := exec.Command("echo", "start work on ").Output()
-	// // log.Println(string(startCMD))
-	// resetCMD := exec.Command("/home/player/resetTerminal")
-	// var out bytes.Buffer
-	// resetCMD.Stdout = &out
-	// resetCMD.Run()
-	// log.Println(out.String())
-
-	//todo: factoryResetURL
 	request, _ := http.NewRequest("POST", factoryResetURL, bytes.NewBuffer(resetVersion))
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 
